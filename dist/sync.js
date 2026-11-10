@@ -2,13 +2,14 @@ const syncKey='forma.pairing.v1';
 let syncing=false;
 async function syncNow(){
  const key=localStorage.getItem(syncKey);
- if(!key||syncing||!navigator.onLine)return;
+ if(activeAccount||!key||syncing||!navigator.onLine)return;
  syncing=true;
  try{
   const {logs,...snapshot}=state;
   const response=await fetch('/api/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({snapshot,logs})});
   if(!response.ok)throw Error();
   const remote=await response.json();
+  if(activeAccount)return;
   const current=state;
   const merged=new Map([...remote.logs,...current.logs].map(l=>[l.session+'-'+l.at,l]));
   if(remote.snapshot.modified>state.modified)state={...initial,...remote.snapshot,logs:[]};
@@ -21,6 +22,7 @@ async function syncNow(){
  }catch{/* Offline records remain queued on this device. */}finally{syncing=false}
 }
 async function connections(){
+ if(activeAccount){show("Recovery connections","<p>Use manual measurements or import wearable JSON for this account.</p>"+action("signals","Recovery signals"));return}
  const service=await fetch('/api/status').then(r=>r.json()).catch(()=>null);
  const key=localStorage.getItem(syncKey);
  if(service?.service!=='forma-sync'){show('Wearable connections','<p>This hosted edition supports JSON imports. Run the included Forma server to enable private device sync and wearable bridge endpoints.</p>'+action('signals','Import measurements'));return}

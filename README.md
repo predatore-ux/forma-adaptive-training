@@ -1,0 +1,11 @@
+# Forma · accounts and training sync
+
+Run from the repository root with Node 24 or newer: `node server.mjs`. Open http://127.0.0.1:4173. Select the athlete initials in the header or **Account & backup** in Activity. Guests can keep logging offline. New accounts can copy the current guest profile; existing accounts always load their own training. Keep the one-time recovery code in a password manager. Recovery rotates the code and signs out all other devices.
+
+For multiple devices, serve the Node app at one HTTPS origin behind a reverse proxy. Configure HOST, PORT, NODE_ENV=production (secure cookies), and FORMA_DATA_DIR pointing to a private persistent volume. Use one Node instance with that SQLite volume. Static-only hosting serves the guest app but does not run the account API. Do not place the database or backups under dist/. No external provider, SMTP service or paid subscription is required.
+
+Each set is appended once; individual settings have server revisions, and the active workout is a single versioned field. After concurrent offline edits to the same field, the first accepted edit wins. Logged sets from both devices are retained. Active session and rest deadline resume on another device after sync. The client syncs after saves, on reconnect, on focus and every 30 seconds. Sign-out requires connectivity and clears the account cache; guest history remains separate. Accounts do not automatically claim legacy pairing keys. Existing paired users should sync in guest mode before creating an account and choosing to copy their history.
+
+Use Download training backup for a readable JSON export of the current profile and set history. For full service backups, run `node backup.mjs /private/path/to/new-backup.sqlite` with the same FORMA_DATA_DIR as the server. The consistent SQLite snapshot contains all accounts and training. Encrypt and protect it, schedule off-host copies, and test restores. To restore, stop the service and start it with FORMA_DATA_DIR set to a **new empty directory** containing the backup renamed training.sqlite. Never copy a live WAL database by copying its main file alone.
+
+Run `node --test accounts.test.mjs` for the multi-device integration test.
