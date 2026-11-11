@@ -44,6 +44,17 @@ try{
  await run("document.querySelector('#recovery-metric').value='hrv';document.querySelector('#recovery-metric').dispatchEvent(new Event('change',{bubbles:true}))");
  assert.equal(await run("recoveryMetric"),'hrv');
  if(process.env.FORMA_SCREENSHOT){const capture=await cmd('Page.captureScreenshot',{captureBeyondViewport:true});await writeFile(process.env.FORMA_SCREENSHOT,Buffer.from(capture.result.data,'base64'))}
+
+ await cmd('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+ if(process.env.FORMA_SCREENSHOT){const shot=await cmd('Page.captureScreenshot',{captureBeyondViewport:true});await writeFile(process.env.FORMA_SCREENSHOT+'.desktop.png',Buffer.from(shot.result.data,'base64'))}
+ for(const target of ['overview','recommended','library']){
+  await run("navigate('"+target+"')");
+  assert.equal(await run("document.documentElement.scrollWidth<=window.innerWidth"),true);
+  assert.ok(await run("main.innerText.length>100"));
+ }
+ await run("navigate('overview')");
+ if(process.env.FORMA_SCREENSHOT){const shot=await cmd('Page.captureScreenshot',{captureBeyondViewport:true});await writeFile(process.env.FORMA_SCREENSHOT+'.overview.png',Buffer.from(shot.result.data,'base64'))}
+ console.log('App: overview, recommendations and library layout checks passed.');
  console.log('Activity: empty state, measurements, check-in, loaded charts, filters, reload and 390px layout passed.');
 
 }finally{ws?.close();chrome.kill();server.kill();await delay(300);await rm(dir,{recursive:true,force:true,maxRetries:6,retryDelay:300})}
