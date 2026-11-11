@@ -26,9 +26,17 @@ test('account continuity, isolation, concurrent offline edits, restart and recov
  await save(a,[{key:'gear',base:1,value:'Hotel gym'}]);
  const merged=await save(b,[{key:'gear',base:1,value:'Full gym'},{key:'pain',base:0,value:4}],[log,{...log,at:11}]);
  assert.equal(merged.logs.length,2);assert.equal(merged.fields.find(f=>f.key==='gear').value,'Hotel gym');assert.equal(merged.fields.find(f=>f.key==='pain').value,4);
+
+ const eventA={uid:'11111111-1111-1111-1111-111111111111',at:Date.now(),kind:'body',weight:75};
+ const eventB={uid:'22222222-2222-2222-2222-222222222222',at:Date.now(),kind:'readiness',score:76};
+ await call('sync',{changes:[],logs:[],observations:[eventA]},a);
+ const progress=await call('sync',{changes:[],logs:[],observations:[eventA,eventB]},b);
+ assert.equal(progress.observations.length,2);
+ assert.equal((await call('sync',null,other)).observations.length,0);
+ assert.equal((await call('sync',{changes:[],logs:[],observations:[{...eventA,weight:-2}]},a)).status,400);
  const backup=join(dir,'backup.sqlite');execFileSync(process.execPath,['backup.mjs',backup],{env:{...process.env,FORMA_DATA_DIR:dir}});
  const restored=new DatabaseSync(backup,{readOnly:true});assert.equal(restored.prepare("SELECT COUNT(*) AS n FROM records WHERE kind='set'").get().n,2);restored.close();
- await stop();await start();assert.equal((await call('sync',null,b)).logs.length,2);
+ await stop();await start();assert.equal((await call('sync',null,b)).logs.length,2);assert.equal((await call('sync',null,b)).observations.length,2);
  assert.deepEqual((await call('sync',null,other)).logs,[]);await call('logout',{},a);assert.equal((await call('sync',null,a)).status,401);assert.equal((await call('sync',null,b)).status,200);
  const reset=await call('recover',{...auth,password:'a different secret phrase',code:a.recoveryCode});assert.equal(reset.status,200);assert.equal((await call('sync',null,b)).status,401);assert.equal((await call('login',auth)).status,401);assert.equal((await call('sync',null,reset)).logs.length,2);
 });

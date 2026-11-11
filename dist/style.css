@@ -15,3 +15,17 @@
 @media(min-width:1001px){.movement-layout .instructions{grid-column:2;grid-row:1 / span 2}}
 @media(max-width:1000px){.movement-layout .player-card{order:0}.movement-layout .references{order:1}.movement-layout .instructions{order:2}}
 @media(max-width:460px){.photo-grid{grid-template-columns:1fr}.photo-grid img{height:auto;max-height:300px}}
+
+.progress-head,.progress-select{display:flex;gap:.65rem;align-items:center}
+.progress-head{justify-content:space-between;margin:1rem 0;flex-wrap:wrap}
+.progress-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0}
+.progress-select{flex-wrap:wrap;margin:.65rem 0;font-size:.9rem}
+.progress-select select{width:auto;max-width:100%;min-height:42px}
+.progress-grid table{width:100%;border-collapse:collapse;font-size:.88rem}
+.progress-grid td,.progress-grid th{text-align:left;border-bottom:1px solid #dbe4da;padding:.55rem .2rem}
+.progress-grid td small,.progress-plot small{display:block}
+.progress-grid summary{cursor:pointer;padding:.6rem 0}
+.progress-plot{margin:.8rem 0;color:#42653e}
+.progress-plot svg{width:100%;height:100px;display:block;fill:currentColor}
+.progress-plot div{display:flex;justify-content:space-between;font-size:.78rem}
+@media(max-width:760px){.progress-grid{grid-template-columns:minmax(0,1fr)}}

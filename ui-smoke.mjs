@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';
-import {mkdtemp,readFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import assert from 'node:assert/strict';
@@ -25,4 +25,25 @@ try{
  await until("!!document.querySelector('[data-act=auth-register]')");
  await run("document.querySelector('[data-act=auth-login]').click();document.querySelector('#acct-name').value='browser.test';document.querySelector('#acct-password').value='long browser password';document.querySelector('#account-form').requestSubmit()");
  await until("!!document.querySelector('[data-act=account-sync]')");assert.match(await run("document.querySelector('#modal').innerText"),/Up to date/);console.log('Browser: registration, recovery code, logout, sign-in and sync status passed.');
+ await run("dialog.close();navigate('activity')");
+ assert.match(await run("main.innerText"),/No sets logged/);
+ await run("document.querySelector('[data-act=measure-body]').click();document.querySelector('#body-weight').value='75.5';document.querySelector('#body-form').requestSubmit()");
+ assert.match(await run("main.innerText"),/75.5/);
+ await run("document.querySelector('[data-act=check]').click();document.querySelector('#checkform').requestSubmit()");
+ assert.equal(await run("state.observations.length"),2);
+ await run("state.logs=[{session:'one',id:'0-0',kg:60,reps:5,rpe:8,at:Date.now()-7*86400000},{session:'two',id:'0-0',kg:65,reps:5,rpe:8,at:Date.now()-1000},{session:'two',id:'9-0',kg:0,reps:12,rpe:6,at:Date.now()}];persist();render()");
+ assert.match(await run("main.innerText"),/Barbell deadlift/);
+ await run("document.querySelector('#activity-measure').value='minutes';document.querySelector('#activity-measure').dispatchEvent(new Event('change',{bubbles:true}))");
+ assert.equal(await run("activityMeasure"),'minutes');
+ await run("syncAccount()");await cmd('Page.reload');await until("document.querySelector('#activity-range')");
+ assert.equal(await run("state.logs.length"),3);
+ assert.match(await run("main.innerText"),/\+5 kg/);
+ assert.equal(await run("state.observations.length"),2);
+ await cmd('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ assert.equal(await run("document.documentElement.scrollWidth<=window.innerWidth"),true);
+ await run("document.querySelector('#recovery-metric').value='hrv';document.querySelector('#recovery-metric').dispatchEvent(new Event('change',{bubbles:true}))");
+ assert.equal(await run("recoveryMetric"),'hrv');
+ if(process.env.FORMA_SCREENSHOT){const capture=await cmd('Page.captureScreenshot',{captureBeyondViewport:true});await writeFile(process.env.FORMA_SCREENSHOT,Buffer.from(capture.result.data,'base64'))}
+ console.log('Activity: empty state, measurements, check-in, loaded charts, filters, reload and 390px layout passed.');
+
 }finally{ws?.close();chrome.kill();server.kill();await delay(300);await rm(dir,{recursive:true,force:true,maxRetries:6,retryDelay:300})}

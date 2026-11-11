@@ -11,11 +11,13 @@ async function syncNow(){
   const remote=await response.json();
   if(activeAccount)return;
   const current=state;
+  const observations=[...new Map([...(remote.snapshot?.observations||[]),...(current.observations||[])].map(e=>[e.uid,e])).values()];
   const merged=new Map([...remote.logs,...current.logs].map(l=>[l.session+'-'+l.at,l]));
   if(remote.snapshot.modified>state.modified)state={...initial,...remote.snapshot,logs:[]};
+  state.observations=observations;
   state.logs=[...merged.values()].sort((a,b)=>a.at-b.at);
   const bio=remote.biometrics;
-  if(bio&&bio.at>(state.bioReceived||0)){state.bioReceived=bio.at;state.bio={...state.bio,hrv:bio.hrv,rhr:bio.rhr,sleep:bio.sleep};state.sample=false;state.source=bio.source;state.stages=bio.stages;modulate();state.modified=Date.now()}
+  if(bio&&bio.at>(state.bioReceived||0)){state.bioReceived=bio.at;state.bio={...state.bio,hrv:bio.hrv,rhr:bio.rhr,sleep:bio.sleep};state.sample=false;state.source=bio.source;state.stages=bio.stages;modulate();saveReadiness();state.modified=Date.now()}
   localStorage.setItem('forma.v1',JSON.stringify(state));
   if(!dialog.open&&!page.startsWith('movement/')&&document.activeElement?.tagName!=='INPUT')render();
   localStorage.setItem('forma.lastsync',String(Date.now()));

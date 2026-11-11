@@ -9,3 +9,15 @@ Each set is appended once; individual settings have server revisions, and the ac
 Use Download training backup for a readable JSON export of the current profile and set history. For full service backups, run `node backup.mjs /private/path/to/new-backup.sqlite` with the same FORMA_DATA_DIR as the server. The consistent SQLite snapshot contains all accounts and training. Encrypt and protect it, schedule off-host copies, and test restores. To restore, stop the service and start it with FORMA_DATA_DIR set to a **new empty directory** containing the backup renamed training.sqlite. Never copy a live WAL database by copying its main file alone.
 
 Run `node --test accounts.test.mjs` for the multi-device integration test.
+
+## Activity analytics
+
+Activity offers 8, 12, 26 and 52 calendar-week views for working sets, lifted load (kg × reps), cardio minutes, logged sessions, and new personal records. Weeks start Monday in the device's local timezone. Sessions with any logged sets count, even if unfinished. Future-dated sets are excluded. The first recorded performance is a baseline, not an improvement. PR comparisons use all available history, including records outside the selected date range.
+
+Strength curves show the daily best e1RM for one selected exercise within a movement pattern; different variations are never combined into one curve. Epley estimates apply only to conventional externally loaded strength lifts with 2–10 reps; single reps use actual logged load. Timed, ballistic, unloaded, rotation and carry movements are excluded. Estimates describe recorded performance, not a prescription to attempt that load.
+
+Volume landmarks are observed weekly set ranges over the previous four weeks, including zero-log weeks, rather than invented minimum/maximum recovery thresholds. Recovery trends begin with saved check-ins; past sample values are not fabricated as history. When recovery data is still sample, the displayed readiness score uses only the subjective check-in. Once real measurements are saved, its existing HRV/sleep contributions apply. Use the signal selector to inspect HRV, resting heart rate, sleep, energy, stress or soreness separately.
+
+Optional weight, waist, hip and chest entries share an append-only observation store with readiness. Every entry has a unique ID so concurrent devices keep both entries; the latest dated measurement per day is charted. Records persist offline, sync to accounts, and are included in JSON and database backups. Photos are not stored. Existing set history requires no migration.
+
+Validation: `node --test progress.test.mjs accounts.test.mjs`; `node ui-smoke.mjs` (Chrome path can be overridden with CHROME_PATH).

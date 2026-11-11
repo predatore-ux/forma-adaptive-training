@@ -47,16 +47,26 @@ export async function accountAPI({req,res,url,sql,json,data}){
  if(route!=='sync'||!['GET','POST'].includes(req.method))return json(404,{error:'Unknown account endpoint.'});
  const id=athlete.id;
  if(req.method==='POST'){
-  const {changes,logs}=data;
-  if(!Array.isArray(logs)||!Array.isArray(changes)||changes.length>64||changes.some(c=>!c||!/^\w{1,32}$/.test(c.key)||['__proto__','constructor','prototype','logs','modified'].includes(c.key)||!Number.isSafeInteger(c.base)||c.base<0)||logs.some(l=>!l||typeof l.session!=='string'||!Number.isSafeInteger(l.at)||!/^\d+-\d+$/.test(l.id)||!Number.isFinite(l.kg)||!Number.isFinite(l.reps)))return json(400,{error:'Invalid training data.'});
+  const {changes,logs,observations=[]}=data;
+  if(!Array.isArray(observations)||observations.some(e=>!validObservation(e)))return json(400,{error:'Invalid progress observation.'});
+  if(!Array.isArray(logs)||!Array.isArray(changes)||changes.length>64||changes.some(c=>!c||!/^\w{1,32}$/.test(c.key)||['__proto__','constructor','prototype','logs','modified','observations'].includes(c.key)||!Number.isSafeInteger(c.base)||c.base<0)||logs.some(l=>!l||typeof l.session!=='string'||!Number.isSafeInteger(l.at)||!/^\d+-\d+$/.test(l.id)||!Number.isFinite(l.kg)||!Number.isFinite(l.reps)))return json(400,{error:'Invalid training data.'});
   sql.exec('BEGIN');
   try{
    const save=sql.prepare('INSERT INTO fields VALUES(?,?,1,?) ON CONFLICT(athlete,field) DO UPDATE SET stamp=fields.stamp+1,value=excluded.value WHERE fields.stamp=?');
    for(const c of changes)save.run(id,c.key,JSON.stringify(c.value??null),c.base);
    const append=sql.prepare('INSERT OR IGNORE INTO records VALUES(?,?,?,?,?)');
+   for(const e of observations)append.run(id,'observation',e.uid,e.at,JSON.stringify(e));
    for(const l of logs)append.run(id,'set',l.session+'-'+l.at,l.at,JSON.stringify(l));
    sql.exec('COMMIT');
   }catch(err){sql.exec('ROLLBACK');throw err}
  }
- return json(200,{fields:sql.prepare('SELECT field AS key,stamp,value FROM fields WHERE athlete=?').all(id).map(f=>({...f,value:JSON.parse(f.value)})),logs:sql.prepare("SELECT body FROM records WHERE owner=? AND kind='set' ORDER BY stamp").all(id).map(l=>JSON.parse(l.body))});
+ return json(200,{observations:sql.prepare("SELECT body FROM records WHERE owner=? AND kind='observation' ORDER BY stamp").all(id).map(e=>JSON.parse(e.body)),fields:sql.prepare('SELECT field AS key,stamp,value FROM fields WHERE athlete=?').all(id).map(f=>({...f,value:JSON.parse(f.value)})),logs:sql.prepare("SELECT body FROM records WHERE owner=? AND kind='set' ORDER BY stamp").all(id).map(l=>JSON.parse(l.body))});
+}
+
+function validObservation(e){
+ if(!e||typeof e.uid!=='string'||!/^[a-f0-9-]{36}$/i.test(e.uid)||!Number.isSafeInteger(e.at)||e.at<=0)return false;
+ const limits=e.kind==='body'?{weight:[0.1,650],waist:[0.1,400],hip:[0.1,400],chest:[0.1,400]}:e.kind==='readiness'?{score:[0,100],stress:[0,10],energy:[0,10],pain:[0,10],hrv:[1,400],rhr:[20,220],sleep:[0,24]}:null;
+ if(!limits||e.kind==='readiness'&&!Number.isFinite(e.score))return false;
+ const keys=Object.keys(e).filter(k=>!['uid','at','kind'].includes(k));
+ return keys.length>0&&keys.every(k=>Object.hasOwn(limits,k)&&Number.isFinite(e[k])&&e[k]>=limits[k][0]&&e[k]<=limits[k][1]);
 }

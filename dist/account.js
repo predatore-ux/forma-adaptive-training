@@ -16,12 +16,12 @@ function syncAccount(){
 async function exchange(){
  const owner=activeAccount.id,meta=syncMeta(),sent=structuredClone(state),changes=[];
  for(const key of new Set([...Object.keys(meta.fields),...Object.keys(sent)])){
-  if(['logs','modified'].includes(key))continue;
+  if(['logs','modified','observations'].includes(key))continue;
   const value=sent[key]??null,prev=meta.fields[key];
   if(!prev||JSON.stringify(prev.value)!==JSON.stringify(value))changes.push({key,value,base:prev?.stamp||0});
  }
  try{
-  const remote=await accountRequest('sync',{changes,logs:sent.logs.filter(l=>!meta.known?.includes(logKey(l)))},owner);
+  const remote=await accountRequest('sync',{changes,observations:(sent.observations||[]).filter(e=>!meta.seen?.includes(e.uid)),logs:sent.logs.filter(l=>!meta.known?.includes(logKey(l)))},owner);
   if(activeAccount?.id!==owner||JSON.parse(localStorage.getItem(accountSlot)||'null')?.id!==owner)return false;
   const fields={},merged=new Map([...remote.logs,...state.logs].map(l=>[logKey(l),l]));
   let conflict=false;
@@ -32,8 +32,9 @@ async function exchange(){
    if(JSON.stringify(state[f.key]??null)===JSON.stringify(sent[f.key]??null)){if(f.value===null&&!(f.key in initial))delete state[f.key];else state[f.key]=f.value}
   }
   const before=JSON.stringify(sent);
+  state.observations=[...new Map([...(remote.observations||[]),...(state.observations||[])].map(e=>[e.uid,e])).values()].sort((a,b)=>a.at-b.at);
   state.logs=[...merged.values()].sort((a,b)=>a.at-b.at);
-  cacheTraining();localStorage.setItem(metaKey(),JSON.stringify({fields,at:Date.now(),known:remote.logs.map(logKey)}));
+  cacheTraining();localStorage.setItem(metaKey(),JSON.stringify({fields,at:Date.now(),seen:(remote.observations||[]).map(e=>e.uid),known:remote.logs.map(logKey)}));
   statusMessage=conflict?'A concurrent edit was kept from the other device. Both set logs are saved.':'Up to date';
   if(conflict)toast(statusMessage);
   if(before!==JSON.stringify(state)&&!dialog.open&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))render();
