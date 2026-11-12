@@ -34,9 +34,13 @@ test('account continuity, isolation, concurrent offline edits, restart and recov
  assert.equal(progress.observations.length,2);
  assert.equal((await call('sync',null,other)).observations.length,0);
  assert.equal((await call('sync',{changes:[],logs:[],observations:[{...eventA,weight:-2}]},a)).status,400);
+
+ const review={uid:'33333333-3333-3333-3333-333333333333',at:Date.now(),kind:'session',session:'44444444-4444-4444-4444-444444444444',programId:'55555555-5555-5555-5555-555555555555',index:0,complete:true,deload:false,feeling:'steady',pain:1,notes:'Controlled movement',fatigue:false};
+ assert.equal((await call('sync',{changes:[],logs:[],observations:[review]},a)).status,200);
+ assert.equal((await call('sync',null,b)).observations.filter(e=>e.kind==='session').length,1);
  const backup=join(dir,'backup.sqlite');execFileSync(process.execPath,['backup.mjs',backup],{env:{...process.env,FORMA_DATA_DIR:dir}});
  const restored=new DatabaseSync(backup,{readOnly:true});assert.equal(restored.prepare("SELECT COUNT(*) AS n FROM records WHERE kind='set'").get().n,2);restored.close();
- await stop();await start();assert.equal((await call('sync',null,b)).logs.length,2);assert.equal((await call('sync',null,b)).observations.length,2);
+ await stop();await start();assert.equal((await call('sync',null,b)).logs.length,2);assert.equal((await call('sync',null,b)).observations.length,3);
  assert.deepEqual((await call('sync',null,other)).logs,[]);await call('logout',{},a);assert.equal((await call('sync',null,a)).status,401);assert.equal((await call('sync',null,b)).status,200);
  const reset=await call('recover',{...auth,password:'a different secret phrase',code:a.recoveryCode});assert.equal(reset.status,200);assert.equal((await call('sync',null,b)).status,401);assert.equal((await call('login',auth)).status,401);assert.equal((await call('sync',null,reset)).logs.length,2);
 });

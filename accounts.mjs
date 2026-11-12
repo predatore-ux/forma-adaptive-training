@@ -65,6 +65,10 @@ export async function accountAPI({req,res,url,sql,json,data}){
 
 function validObservation(e){
  if(!e||typeof e.uid!=='string'||!/^[a-f0-9-]{36}$/i.test(e.uid)||!Number.isSafeInteger(e.at)||e.at<=0)return false;
+ if(e.kind==='session'){
+  const keys=['uid','at','kind','session','programId','index','complete','deload','feeling','pain','notes','fatigue'];
+  return Object.keys(e).every(k=>keys.includes(k))&&[e.session,e.programId].every(v=>typeof v==='string'&&/^[a-f0-9-]{36}$/i.test(v))&&Number.isInteger(e.index)&&e.index>=0&&e.index<16&&typeof e.complete==='boolean'&&typeof e.deload==='boolean'&&typeof e.fatigue==='boolean'&&['steady','strong','drained'].includes(e.feeling)&&Number.isFinite(e.pain)&&e.pain>=0&&e.pain<=10&&typeof e.notes==='string'&&e.notes.length<=500;
+ }
  const limits=e.kind==='body'?{weight:[0.1,650],waist:[0.1,400],hip:[0.1,400],chest:[0.1,400]}:e.kind==='readiness'?{score:[0,100],stress:[0,10],energy:[0,10],pain:[0,10],hrv:[1,400],rhr:[20,220],sleep:[0,24]}:null;
  if(!limits||e.kind==='readiness'&&!Number.isFinite(e.score))return false;
  const keys=Object.keys(e).filter(k=>!['uid','at','kind'].includes(k));

@@ -88,6 +88,7 @@ function movementPage(id){
 }
 function startSelected(replace=false){
   const selected=currentPlan(), active=state.session;
+  if(replace&&active?.programId){finishProgramSession();return}
   if(active&&active.planId!==selected.id&&(active.planId||state.planId)&&!replace){
     show('Switch sessions?','<p>Your logged sets will stay in Activity. Start '+selected.name+' or continue the current session.</p><div class="tools">'+action('replace-session','Start selected session','primary')+action('resume-session','Continue current session')+'</div>');return;
   }

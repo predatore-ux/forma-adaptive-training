@@ -21,3 +21,17 @@ Volume landmarks are observed weekly set ranges over the previous four weeks, in
 Optional weight, waist, hip and chest entries share an append-only observation store with readiness. Every entry has a unique ID so concurrent devices keep both entries; the latest dated measurement per day is charted. Records persist offline, sync to accounts, and are included in JSON and database backups. Photos are not stored. Existing set history requires no migration.
 
 Validation: `node --test progress.test.mjs accounts.test.mjs`; `node ui-smoke.mjs` (Chrome path can be overridden with CHROME_PATH).
+
+## Adaptive programs
+
+The Program tab builds four-week blocks for strength, muscle development, conditioning or return to training. Choose 2–4 sessions per week; return-to-training uses two. Week 4 is a planned deload. Frequency determines sessions per block phase, not a calendar deadline: missed days never advance or compress training. Current experience, equipment, seated track and joint restrictions resolve the movement slots.
+
+Each session saves its program ID, sequence position and deload status. Only a finished review with every movement's working sets logged advances the block. Skipping a movement or finishing early retains the position. Independent devices completing the same position advance it only once; all set logs and reviews remain. Switching away from an active program session opens its review first. The final set opens a resumable review screen.
+
+Loads start at zero until an exposure to that exact variation has been logged in this block. The engine can suggest 2.5% more load (rounded to 0.5 kg) when the last completed exposure met every rep target within target effort and the phase isn't also increasing reps. Unweighted work progresses by one rep or minute with caps. Incomplete exposures and missed targets do not earn overload. High effort, more than 20% logged velocity loss, drained feeling or joint feedback reduce demand. New variations never inherit another exercise's load.
+
+Two consecutive demanding reviews, suppressed current readiness, or the most recent non-deload review reporting discomfort of 4/10 or above trigger an early recovery workload. Deloads reduce sets, cap effort at 6, reduce established loads and avoid axial/high-demand movements. A completed early deload occupies one block position. Sample wearable values do not drive readiness flags. These are transparent deterministic coaching heuristics; they are not individualized clinical rehabilitation prescriptions. Free-text notes are retained and displayed, not interpreted as biometric inputs.
+
+Program settings use account field revisions; reviews use the append-only observations store. Both are included in backups. Existing standalone sessions remain available. A completed block can be replaced from Program, with previous logs and reviews retained.
+
+Tests: `node --test programming.test.mjs progress.test.mjs accounts.test.mjs`; browser coverage includes program creation, actual set submission, completion review, progressive load, partial-session handling, joint deload, persistence and mobile layout.

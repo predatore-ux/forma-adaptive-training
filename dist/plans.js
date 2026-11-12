@@ -52,26 +52,27 @@ function currentPlan(){
   return plans.find(p=>p.id===state.planId)||plans.find(p=>p.level===defaultLevel()&&p.type===({Seated:'seated',Endurance:'cardio'}[state.track]||'strength'));
 }
 function equipment(e){return e.equipment||({gym:'Gym equipment',db:'Dumbbell',none:'Bodyweight'})[e.gear]}
-function eligible(e, seatedOnly){
+function eligible(e, seatedOnly, planId=state.session?.planId||state.planId){
   if(seatedOnly&&!e.seated)return false;
   if(state.gear!=='Full gym'&&e.gear==='gym')return false;
   if(state.gear==='Bodyweight only'&&e.gear==='db')return false;
-  const gentle=rules().low||state.experience==='Return to training';
+  const programGentle=state.program&&Programming.cursor(state.program,state.observations||[])<state.program.frequency*4&&state.program.planId===planId&&(state.program.goal==='return'||programState()?.deload);
+  const gentle=rules().low||state.experience==='Return to training'||programGentle;
   if(gentle&&(e.axial||e.demand>0))return false;
   if(state.experience==='New to training'&&e.demand>1)return false;
   if(state.joint==='Limited knee'&&(e.demand>0||([1,2].includes(e.p)&&e.axial)))return false;
   if(state.joint==='Limited shoulder or wrist'&&((e.demand&&e.p!==2)||['3-0','5-0'].includes(e.id)))return false;
   return !(state.limbs==='Long femurs'&&e.id==='1-0');
 }
-function resolvedItems(plan){
+function baselineResolvedItems(plan){
   const seated=state.track==='Seated'||plan.type==='seated';
   const used=new Set();
   return plan.slots.map(slot=>{
-    let candidates=catalog.filter(e=>e.p===slot.p&&eligible(e,seated));
+    let candidates=catalog.filter(e=>e.p===slot.p&&eligible(e,seated,plan.id));
     if(seated&&(![3,4,5,6,7,8,9].includes(slot.p)||!candidates.some(e=>!used.has(e.id)))){
-      candidates=catalog.filter(e=>[3,4,8,9].includes(e.p)&&e.seated&&eligible(e,true)&&!used.has(e.id));
+      candidates=catalog.filter(e=>[3,4,8,9].includes(e.p)&&e.seated&&eligible(e,true,plan.id)&&!used.has(e.id));
     }
-    if(!candidates.length)candidates=catalog.filter(e=>e.seated&&eligible(e,true)&&[3,4,8,9].includes(e.p));
+    if(!candidates.length)candidates=catalog.filter(e=>e.seated&&eligible(e,true,plan.id)&&[3,4,8,9].includes(e.p));
     let movement=candidates.find(e=>e.id===slot.preferred&&!used.has(e.id));
     if(!movement&&slot.p===1&&rules().low)movement=candidates.find(e=>e.id==='1-3');
     movement ||= candidates.find(e=>!used.has(e.id)&&state.experience!=='Trained'&&e.gear==='none');
@@ -92,5 +93,6 @@ function newSession(plan=currentPlan()){
   const items=resolvedItems(plan);
   state.phase='Modulated';
   state.session={id:crypto.randomUUID(),planId:plan.id,low:rules().low,i:0,n:1,end:0,start:Date.now(),items};
+  if(state.program?.planId===plan.id){const c=programState();if(c.index<state.program.frequency*4){state.session.programId=state.program.id;state.session.programIndex=c.index;state.session.programDeload=c.deload}}
   state.phase='In-Workout';persist();
 }

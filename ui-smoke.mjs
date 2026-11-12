@@ -57,4 +57,31 @@ try{
  console.log('App: overview, recommendations and library layout checks passed.');
  console.log('Activity: empty state, measurements, check-in, loaded charts, filters, reload and 390px layout passed.');
 
+ await run("navigate('program');document.querySelector('[data-act=program-create]').click();document.querySelector('#program-form').requestSubmit()");
+ assert.equal(await run("state.program.goal"),'strength');
+ await run("document.querySelector('[data-act=program-start]').click()");
+ assert.equal(await run("state.session.programIndex"),0);
+ // Submit actual set forms through the browser, including the automatic final review.
+ for(let i=0;i<30;i++){
+  if(await run("!!document.querySelector('#program-review')"))break;
+  await run("document.querySelector('#kg').value='20';document.querySelector('#effort').value=state.session.items[state.session.i].rpe;document.querySelector('#logform').requestSubmit()");
+  await delay(15);
+ }
+ assert.equal(await run("document.querySelector('#program-review')?.dataset.complete"),'true');
+ await run("document.querySelector('#program-review').requestSubmit()");
+ assert.equal(await run("programState().index"),1);
+ assert.equal(await run("resolvedItems(plans.find(p=>p.id===state.program.planId))[0].kg"),20.5);
+ await run("document.querySelector('[data-act=program-start]').click();document.querySelector('#logform').requestSubmit();if(dialog.open)dialog.close();document.querySelector('[data-act=finish]').click();document.querySelector('[data-act=finish-now]').click();document.querySelector('#session-pain').value='5';document.querySelector('#program-review').requestSubmit()");
+ assert.equal(await run("programState().index"),1);assert.equal(await run("programState().deload"),true);
+ await run("syncAccount()");await cmd('Page.reload');await until("main.innerText.includes('Next session')");
+ assert.equal(await run("programState().index"),1);
+ assert.equal(await run("state.observations.filter(e=>e.kind==='session').length"),2);
+ await cmd('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ assert.equal(await run("document.documentElement.scrollWidth<=window.innerWidth"),true);
+ if(process.env.FORMA_SCREENSHOT){const shot=await cmd('Page.captureScreenshot',{captureBeyondViewport:true});await writeFile(process.env.FORMA_SCREENSHOT+'.program.png',Buffer.from(shot.result.data,'base64'))}
+ await run("document.querySelector('[data-act=program-create]').click();document.querySelector('#program-goal').value='return';document.querySelector('#program-form').requestSubmit()");
+ assert.equal(await run("state.program.frequency"),2);
+ assert.equal(await run("resolvedItems(plans.find(p=>p.id===state.program.planId)).every(i=>!lookup(i.id).axial&&i.rpe<=6)"),true);
+ console.log('Program: create, complete actual sets, progress load, partial finish, joint deload, sync, reload and mobile passed.');
+
 }finally{ws?.close();chrome.kill();server.kill();await delay(300);await rm(dir,{recursive:true,force:true,maxRetries:6,retryDelay:300})}

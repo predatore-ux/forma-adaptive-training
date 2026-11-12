@@ -124,3 +124,13 @@ dialog small{color:var(--muted);line-height:1.6}
  .work .entry{gap:8px}
 }
 @media(prefers-reduced-motion:reduce){button,nav button{transition:none}}
+
+.program-weeks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 24px}
+.program-weeks .card{padding:20px}
+.program-weeks h2{font-size:19px;margin:12px 0 0}
+.program-weeks small,.program-movement small{color:var(--muted);line-height:1.6}
+.program-current{background:#edf4e3;border-color:#9cb68d}
+.program-movement{border-top:1px solid var(--line);padding:18px 0}
+.program-movement p{margin:6px 0;font-size:13px}
+@media(max-width:1000px){.bar{gap:20px}nav{gap:15px}.program-weeks{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:750px){nav{gap:4px}nav button{font-size:10px}.program-weeks .card{padding:16px}.program-movement .headrow{align-items:flex-start;flex-wrap:wrap}}

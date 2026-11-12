@@ -24,7 +24,7 @@ let state=loadTraining();
 let db;const opened=new Promise(resolve=>{const r=indexedDB.open('forma-training',1);r.onupgradeneeded=()=>r.result.createObjectStore('snapshots');r.onsuccess=()=>{db=r.result;resolve(db)};r.onerror=()=>resolve(null)});
 function cacheTraining(){const key=stateKey(),value=structuredClone(state);localStorage.setItem(key,JSON.stringify(value));opened.then(d=>{if(d)d.transaction('snapshots','readwrite').objectStore('snapshots').put(value,key==='forma.v1'?'current':key)})}
 function persist(){state.modified=Date.now();cacheTraining();window.dispatchEvent(new Event('forma-saved'))}
-function rules(){const b=state.bio,z=(b.hrv-b.base)/Math.max(1,b.sd),low=z< -1.5||state.pain>=7||state.energy<=3,high=!low&&z>1&&state.pain<=3&&state.energy>=6&&state.stress<7;return{low,high,score:Math.max(5,Math.min(99,Math.round(57+state.energy*3-state.pain*2-state.stress*2+(state.sample?0:z*6+(b.sleep-7)*4)))),sets:low?2:3,rpe:low?6:8,scale:low?.8:high?1.025:1}}
+function rules(){const b=state.bio,z=state.sample?0:(b.hrv-b.base)/Math.max(1,b.sd),low=z< -1.5||state.pain>=7||state.energy<=3,high=!low&&z>1&&state.pain<=3&&state.energy>=6&&state.stress<7;return{low,high,score:Math.max(5,Math.min(99,Math.round(57+state.energy*3-state.pain*2-state.stress*2+(state.sample?0:z*6+(b.sleep-7)*4)))),sets:low?2:3,rpe:low?6:8,scale:low?.8:high?1.025:1}}
 
 function options(p) {
   const plan = plans.find(plan => plan.id === state.session?.planId);
